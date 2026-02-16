@@ -1,16 +1,18 @@
 import type { InputType, PostLength, PostTone } from "@/types";
 
 export function buildIdeasPrompt(type: InputType, content: string): string {
-  const contextDescription =
-    type === "article"
-      ? "Based on the following article, generate LinkedIn post ideas that would engage professionals and spark discussions."
-      : "Based on the following topic/keyword, generate LinkedIn post ideas that would engage professionals and spark discussions.";
+  const contextDescriptions: Record<InputType, string> = {
+    article: "Based on the following article, generate LinkedIn post ideas that would engage professionals and spark discussions.",
+    topic: "Based on the following topic/keyword, generate LinkedIn post ideas that would engage professionals and spark discussions.",
+    url: "Based on the following content extracted from web articles, generate LinkedIn post ideas that would engage professionals and spark discussions. The content comes from one or more URLs the user provided.",
+  };
+  const contextDescription = contextDescriptions[type];
 
   return `You are a LinkedIn content strategist helping create engaging professional posts.
 
 ${contextDescription}
 
-${type === "article" ? "ARTICLE:" : "TOPIC:"}
+${type === "article" ? "ARTICLE:" : type === "url" ? "WEB CONTENT:" : "TOPIC:"}
 ${content}
 
 Generate 3-5 unique LinkedIn post ideas. Each idea should take a different angle:
@@ -60,7 +62,7 @@ export function buildDraftPrompt(
 
   return `You are a LinkedIn content writer creating an engaging post.
 
-ORIGINAL ${originalType === "article" ? "ARTICLE" : "TOPIC"}:
+ORIGINAL ${originalType === "article" ? "ARTICLE" : originalType === "url" ? "WEB CONTENT" : "TOPIC"}:
 ${originalContent}
 
 POST IDEA TO EXPAND:

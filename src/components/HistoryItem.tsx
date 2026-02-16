@@ -13,9 +13,11 @@ interface HistoryItemProps {
 export function HistoryItem({ entry, onSelect, onDelete, index = 0 }: HistoryItemProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const preview = entry.content.length > 100
-    ? entry.content.slice(0, 100) + '...'
-    : entry.content;
+  const preview = entry.type === 'url' && entry.sourceUrls
+    ? entry.sourceUrls.join(', ')
+    : entry.content.length > 100
+      ? entry.content.slice(0, 100) + '...'
+      : entry.content;
 
   const date = new Date(entry.createdAt);
   const formattedDate = date.toLocaleString('en-GB', {
@@ -61,12 +63,18 @@ export function HistoryItem({ entry, onSelect, onDelete, index = 0 }: HistoryIte
             inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg mb-2
             ${entry.type === 'article'
               ? 'bg-coral-100 text-coral-700'
-              : 'bg-teal-100 text-teal-700'
+              : entry.type === 'url'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-teal-100 text-teal-700'
             }
           `}>
             {entry.type === 'article' ? (
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            ) : entry.type === 'url' ? (
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             ) : (
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

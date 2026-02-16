@@ -8,6 +8,7 @@ import type { HistoryEntry } from '@/lib/db';
 interface IdeasResponse {
   input: Input;
   ideas: Idea[];
+  warnings?: string[];
 }
 
 interface DraftResponse {
@@ -41,17 +42,21 @@ export function useContentGeneration() {
     resetToIdeas,
   } = useContentStore();
 
-  const submitInput = useCallback(async (type: InputType, content: string) => {
+  const submitInput = useCallback(async (type: InputType, content: string, urls?: string[]) => {
     setError(null);
     setFlowState('generating-ideas');
     reset();
     setFlowState('generating-ideas');
 
     try {
+      const requestBody = type === 'url'
+        ? { type, urls }
+        : { type, content };
+
       const response = await fetch('/api/ideas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, content }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -63,6 +68,10 @@ export function useContentGeneration() {
       setCurrentInput(data.input);
       setIdeas(data.ideas);
       setFlowState('ideas-ready');
+
+      if (data.warnings && data.warnings.length > 0) {
+        setError(`Warning: ${data.warnings.join('. ')}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setFlowState('idle');

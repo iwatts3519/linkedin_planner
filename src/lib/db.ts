@@ -23,6 +23,58 @@ function getDb(): Database.Database {
     // Apply schema
     const schema = fs.readFileSync(SCHEMA_PATH, "utf-8");
     db.exec(schema);
+
+    // Migration: rebuild inputs table to add 'url' type to CHECK constraint and source_urls column.
+    // SQLite doesn't support ALTER CHECK, so we recreate the table if needed.
+    const tableInfo = db.prepare("PRAGMA table_info(inputs)").all() as Array<{ name: string }>;
+    const hasSourceUrls = tableInfo.some((col) => col.name === "source_urls");
+    if (!hasSourceUrls) {
+      // Need to disable FK checks temporarily for the table rebuild
+      db.pragma("foreign_keys = OFF");
+      db.exec(`
+        BEGIN;
+        CREATE TABLE inputs_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL CHECK (type IN ('article', 'topic', 'url')),
+          content TEXT NOT NULL,
+          source_urls TEXT DEFAULT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO inputs_new (id, type, content, created_at)
+          SELECT id, type, content, created_at FROM inputs;
+        DROP TABLE inputs;
+        ALTER TABLE inputs_new RENAME TO inputs;
+        CREATE INDEX IF NOT EXISTS idx_inputs_created_at ON inputs(created_at DESC);
+        COMMIT;
+      `);
+      db.pragma("foreign_keys = ON");
+    } else {
+      // Table already has source_urls — check if CHECK constraint includes 'url'
+      // by trying a dry-run (checking the SQL used to create the table)
+      const createSql = (db.prepare(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='inputs'"
+      ).get() as { sql: string } | undefined)?.sql ?? "";
+      if (!createSql.includes("'url'")) {
+        db.pragma("foreign_keys = OFF");
+        db.exec(`
+          BEGIN;
+          CREATE TABLE inputs_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL CHECK (type IN ('article', 'topic', 'url')),
+            content TEXT NOT NULL,
+            source_urls TEXT DEFAULT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+          );
+          INSERT INTO inputs_new (id, type, content, source_urls, created_at)
+            SELECT id, type, content, source_urls, created_at FROM inputs;
+          DROP TABLE inputs;
+          ALTER TABLE inputs_new RENAME TO inputs;
+          CREATE INDEX IF NOT EXISTS idx_inputs_created_at ON inputs(created_at DESC);
+          COMMIT;
+        `);
+        db.pragma("foreign_keys = ON");
+      }
+    }
   }
   return db;
 }
@@ -31,10 +83,14 @@ function getDb(): Database.Database {
 export function createInput(data: CreateInput): Input {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO inputs (type, content)
-    VALUES (@type, @content)
+    INSERT INTO inputs (type, content, source_urls)
+    VALUES (@type, @content, @sourceUrls)
   `);
-  const result = stmt.run(data);
+  const result = stmt.run({
+    type: data.type,
+    content: data.content,
+    sourceUrls: data.sourceUrls ? JSON.stringify(data.sourceUrls) : null,
+  });
   return getInputById(result.lastInsertRowid as number)!;
 }
 
@@ -42,8 +98,9 @@ export function getInputById(id: number): Input | null {
   const db = getDb();
   const row = db.prepare("SELECT * FROM inputs WHERE id = ?").get(id) as {
     id: number;
-    type: "article" | "topic";
+    type: "article" | "topic" | "url";
     content: string;
+    source_urls: string | null;
     created_at: string;
   } | undefined;
 
@@ -53,6 +110,7 @@ export function getInputById(id: number): Input | null {
     id: row.id,
     type: row.type,
     content: row.content,
+    sourceUrls: row.source_urls ? (JSON.parse(row.source_urls) as string[]) : null,
     createdAt: row.created_at,
   };
 }
@@ -61,8 +119,9 @@ export function getAllInputs(): Input[] {
   const db = getDb();
   const rows = db.prepare("SELECT * FROM inputs ORDER BY created_at DESC").all() as Array<{
     id: number;
-    type: "article" | "topic";
+    type: "article" | "topic" | "url";
     content: string;
+    source_urls: string | null;
     created_at: string;
   }>;
 
@@ -70,6 +129,7 @@ export function getAllInputs(): Input[] {
     id: row.id,
     type: row.type,
     content: row.content,
+    sourceUrls: row.source_urls ? (JSON.parse(row.source_urls) as string[]) : null,
     createdAt: row.created_at,
   }));
 }
@@ -212,8 +272,9 @@ export function deletePost(id: number): boolean {
 // History operations
 export interface HistoryEntry {
   id: number;
-  type: "article" | "topic";
+  type: "article" | "topic" | "url";
   content: string;
+  sourceUrls: string[] | null;
   createdAt: string;
   ideaCount: number;
 }
@@ -225,6 +286,7 @@ export function getHistory(limit = 50, offset = 0): HistoryEntry[] {
       i.id,
       i.type,
       i.content,
+      i.source_urls,
       i.created_at,
       COUNT(ideas.id) as idea_count
     FROM inputs i
@@ -234,8 +296,9 @@ export function getHistory(limit = 50, offset = 0): HistoryEntry[] {
     LIMIT ? OFFSET ?
   `).all(limit, offset) as Array<{
     id: number;
-    type: "article" | "topic";
+    type: "article" | "topic" | "url";
     content: string;
+    source_urls: string | null;
     created_at: string;
     idea_count: number;
   }>;
@@ -244,6 +307,7 @@ export function getHistory(limit = 50, offset = 0): HistoryEntry[] {
     id: row.id,
     type: row.type,
     content: row.content,
+    sourceUrls: row.source_urls ? (JSON.parse(row.source_urls) as string[]) : null,
     createdAt: row.created_at,
     ideaCount: row.idea_count,
   }));

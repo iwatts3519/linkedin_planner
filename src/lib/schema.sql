@@ -3,8 +3,9 @@
 -- Inputs: stores pasted articles or topics
 CREATE TABLE IF NOT EXISTS inputs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT NOT NULL CHECK (type IN ('article', 'topic')),
+  type TEXT NOT NULL CHECK (type IN ('article', 'topic', 'url')),
   content TEXT NOT NULL,
+  source_urls TEXT DEFAULT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

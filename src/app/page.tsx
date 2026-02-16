@@ -127,7 +127,7 @@ export default function Home() {
               <span className="text-coral-600"> engaging</span> LinkedIn posts
             </h2>
             <p className="text-lg sm:text-xl text-ink-500 leading-relaxed animate-fade-up opacity-0" style={{ animationDelay: '0.3s', animationFillMode: 'forwards' }}>
-              Paste an article or describe a topic, and let AI generate compelling content ideas tailored for professional audiences.
+              Paste an article, describe a topic, or share URLs — let AI generate compelling content ideas tailored for professional audiences.
             </p>
           </div>
         </div>

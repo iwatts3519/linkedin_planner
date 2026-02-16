@@ -1,13 +1,14 @@
 import { z } from "zod/v4";
 
 // Input types
-export const InputTypeSchema = z.enum(["article", "topic"]);
+export const InputTypeSchema = z.enum(["article", "topic", "url"]);
 export type InputType = z.infer<typeof InputTypeSchema>;
 
 export const InputSchema = z.object({
   id: z.number(),
   type: InputTypeSchema,
   content: z.string(),
+  sourceUrls: z.array(z.string()).nullable().optional(),
   createdAt: z.string(),
 });
 export type Input = z.infer<typeof InputSchema>;
@@ -15,8 +16,14 @@ export type Input = z.infer<typeof InputSchema>;
 export const CreateInputSchema = z.object({
   type: InputTypeSchema,
   content: z.string().min(1, "Content is required"),
+  sourceUrls: z.array(z.string()).nullable().optional(),
 });
 export type CreateInput = z.infer<typeof CreateInputSchema>;
+
+export const UrlInputSchema = z.object({
+  type: z.literal("url"),
+  urls: z.array(z.string().url("Invalid URL format")).min(1, "At least one URL is required").max(5, "Maximum 5 URLs allowed"),
+});
 
 // Idea types
 export const IdeaSchema = z.object({
