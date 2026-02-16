@@ -9,6 +9,7 @@
 | 3 | Core UI Components | ✅ Complete | 100% |
 | 4 | Main Page & Flow | ✅ Complete | 100% |
 | 5 | History & Polish | ✅ Complete | 100% |
+| 6 | URL-Based Content Input | ✅ Complete | 100% |
 
 **Status Key**: 📋 Planned | 🚧 In Progress | ✅ Complete
 
@@ -19,7 +20,7 @@
 Single-page web app for generating LinkedIn content. Users paste article text or enter topics, AI generates 3-5 post ideas, then full drafts with length/tone variations.
 
 ### Core Features
-- **Input**: Paste article text OR enter topic/keyword
+- **Input**: Paste article text, enter topic/keyword, OR paste 1-5 URLs
 - **AI**: Anthropic Claude API for content generation
 - **Output**: 3-5 ideas → drafts → variations (length + tone)
 - **Extras**: Hashtag suggestions, posting times, character count
@@ -56,6 +57,10 @@ Wire components together, implement state management, connect to API routes.
 Add history sidebar, responsive design, and final UI polish.
 → [Full details](docs/phases/phase-05-history-polish.md)
 
+### Phase 6: URL-Based Content Input
+Add URL as a third input type. Users paste 1-5 URLs, server fetches and extracts article content using cheerio, feeds combined text to Claude for idea generation. Includes DB migration for existing databases, partial failure handling with warnings, URL extractor with semantic selector fallback, and unit tests.
+→ [Full details](docs/phases/phase-06-url-input.md)
+
 ---
 
 ## Environment Variables
@@ -67,6 +72,6 @@ ANTHROPIC_API_KEY=your_api_key_here
 ## Dependencies
 
 ```bash
-npm install @anthropic-ai/sdk better-sqlite3 zod
+npm install @anthropic-ai/sdk better-sqlite3 zod cheerio
 npm install -D @types/better-sqlite3
 ```
